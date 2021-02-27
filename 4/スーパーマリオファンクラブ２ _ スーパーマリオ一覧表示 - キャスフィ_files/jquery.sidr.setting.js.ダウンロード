@@ -1,0 +1,15 @@
+$(function() {
+    $('.js-slide-menu').sidr({
+        name: 'sidr',
+        speed: 400,
+        side: 'right',
+        onOpen: function() {
+            // オーバーレイ
+            $('.js-slide-overlay').fadeIn('fast');
+        },
+        onClose: function() {
+            // オーバーレイ
+            $('.js-slide-overlay').fadeOut('fast');
+        },
+    });
+});

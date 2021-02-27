@@ -1,0 +1,23 @@
+$(function() {
+    // 掲示板ページ 続きを表示
+    $('[id^="js-rest-"]').on('click', function() {
+        var id = $(this).prop('id').split('-');
+        $(this).hide();
+        $('#js-response-tranc-' + id[2]).hide();
+        $('#js-response-rest-' + id[2]).show();
+    });
+
+    // トップページ概要 開閉
+    $('#js-overview-toggle').on('click', function() {
+        $('#js-overview').slideToggle();
+        $(this).toggleClass('ic_arrow07_t').toggleClass('ic_arrow07_b');
+    });
+    
+    // アンカー設定 固定ヘッダのためjsで制御
+    if ($('#anchor').length) {
+        var headerHight = 70; // ヘッダの高さ
+        var target = $('#' + $('#anchor').data('target'));
+        var position = target.offset().top-headerHight;
+        $("html, body").animate({scrollTop:position}, 550, "swing");
+    }    
+});

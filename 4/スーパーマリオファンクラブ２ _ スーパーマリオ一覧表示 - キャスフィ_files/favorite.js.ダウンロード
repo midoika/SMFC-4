@@ -1,0 +1,136 @@
+$(function() {
+    // スレッドページ
+    $('[id^="js-btFavo"]').on('click', function() {
+        if ($(this).prop('id').indexOf('js-btFavo-on') != -1) return; 
+        var element = $(this);
+        $.ajax({
+            type: 'POST',
+            url: '/favorite/add/' + element.data('id') + '/',
+            cache: false,
+            success: function(result) {
+                var data = $.parseJSON(result);
+                if (!data['error']) {
+                    // 対象のお気に入りボタンを取得
+                    var target = element.prop('id').split('-');
+                    var id = '';
+                    if (target[2]) id = '-' + target[2];
+                    
+                    // 各要素操作
+                    $('#js-btFavo' + id).hide();
+                    $('#js-btFavo-on' + id).show();
+                    $('#js-favo-err').hide();
+                    $('.js-favo-bottom').toggle();
+                    if (!data['login']) {
+                        $('#js-favo-nologin').show();
+                    }
+                    // サイド・ドロワーのお気に入り追加
+                    var html = '<li class="js-side-favothread-' + element.data('id') + '">';
+                    html += '<a href="/bbs/' + element.data('directory') + '/' + element.data('id') + '/">';
+                    html += element.data('title') + '(' + element.data('count') + ')</a></li>';
+                    // 追加前に現在のお気に入り数を取得しておく
+                    var count = getFavoCount();
+                    // お気に入り追加
+                    $('.js-side-favolist').prepend(html);
+                    // お気に入り無し時のメッセージ削除
+                    $('.js-favo-none').remove();
+                    // 全てを見る追加
+                    if (count == 0) {
+                        $('.js-side-favolist').after('<div class="mod-favoMenu-more js-favoMenu-more"><div class="mod-btNormal"><a href="/favorite/">すべて見る</a></div></div>');
+                    }
+                } else {
+                    $('#js-favo-err').show().delay(3000).fadeOut('slow');
+                }
+            },
+            error: function() {
+            }
+        });
+    });
+    $('[id^="js-btFavo-on"]').on('click', function() {
+        if (!confirm('本当に削除しますか？')) {
+            /* キャンセルの時の処理 */
+            return false;
+        }
+        var element = $(this);
+        $.ajax({
+            type: 'POST',
+            url: '/favorite/delete/' + element.data('id') + '/',
+            cache: false,
+            success: function(result) {
+                // 対象のお気に入りボタンを取得
+                var target = element.prop('id').split('-');
+                var id = '';
+                if (target[3]) id = '-' + target[3];
+                
+                // 各要素操作
+                $('#js-btFavo' + id).show();
+                $('#js-btFavo-on' + id).hide();
+                $('#js-favo-nologin').hide();
+                $('.js-favo-bottom').toggle();
+                removeFavo(element.data('id'));
+            },
+            error: function() {
+            }
+        });
+
+    });
+
+    // お気にいり一覧
+    $('.js-btFavo-delete').on('click', function() {
+        if (!confirm('本当に削除しますか？')) {
+            /* キャンセルの時の処理 */
+            return false;
+        }
+        var element = $(this).closest('li');
+        var threadId = element.data('id');
+        $.ajax({
+            type: 'POST',
+            url: '/favorite/delete/' + threadId + '/',
+            cache: false,
+            success: function(result) {
+                element.hide();
+                removeFavo(threadId);
+            },
+            error: function() {
+            }
+        });
+
+    });
+
+    // 通知切り替え
+    $('.js-favo-notification').on('change', function() {
+        var element = $(this).closest('li');
+        $.ajax({
+            type: 'POST',
+            url: '/favorite/notification/' + element.data('id') + '/',
+            cache: false,
+            data: {
+                'state': $(this).prop('checked') ? 1 : 0
+            },
+            success: function(result) {
+            },
+            error: function() {
+            }
+        });
+    });
+});
+
+// サイド・ドロワーお気に入り削除処理
+function removeFavo(threadId) {
+    var target = $('.js-side-favothread-' + threadId);
+    var list = $('.js-side-favolist');
+    // 表示されているものが削除対象であれば隠れているお気に入りから繰り上げて表示させる
+    if (target.is(':visible')) {
+        list.children('li:hidden').first().show();
+    }
+    target.remove();
+    if (getFavoCount() < 1) {
+        list.after('<div class="mod-favoMenu-zero js-favo-none">お気に入りはありません</div>');
+        $('.js-favoMenu-more').remove();
+    }
+}
+
+// お気に入りの数を取得
+function getFavoCount() {
+    var list = $('.js-side-favolist');
+    return list.children('li').length / list.length;
+}

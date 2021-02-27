@@ -1,0 +1,212 @@
+$(document).ready(function() {
+    $(function() {
+        var max = 2000;
+
+        // テキストエリアがあればテキストエリア残り文字表示
+        if ($('#bottomForm').find('textarea').length != 0) {
+            $('#bottomForm').find('.count').html(max - ($('#bottomForm').find('textarea').val().length));
+        }
+
+        // confirm / error からの戻り時 ポップアップ表示する
+        if ($('#js-position-order').val() > 0) {
+            var order = $('#js-position-order').val();
+            var copy = $('#js-inner-response-form').clone(true);
+
+            copy.attr('class', 'js-copy-inner-response-form');
+
+            if (order > 1) {
+                $('li#' + order).find('.js-reply-div').after(copy);
+            } else {
+                $('div#top-form').find('.js-reply-div').after(copy);
+            }
+            // ポップアップ表示
+            $('.js-copy-inner-response-form').fadeIn('fast');
+            // テキストエリアは非表示
+            $('#js-bottom').find('textarea').val('');
+        }
+
+        // 返信ボタン押下
+        $('.js-res-action').click(function(event) {
+            // 既にあるポップアップフォームは削除
+            $('.js-copy-inner-response-form').remove();
+            // ポップアップフォームをコピー
+            var copy = $('#js-inner-response-form').clone(true);
+            // クラスは書き換え
+            copy.attr('class', 'js-copy-inner-response-form');
+
+            // フォームをボタンの下に設定
+            $(this).parent('.js-reply-div').after(copy);
+            // フォームの初期設定
+            copy.find('textarea').val('>>' + this.id + "\n");
+            copy.find('.count').html(max - (copy.find('textarea').val().length));
+            copy.fadeIn('fast');
+            return true;
+        });
+        
+        $('[id^="js-comment-popup"]').click(function() {
+            // 既にあるポップアップフォームは非表示
+            $('[id="js-inner-response-form"]').hide();
+            // 対象フォームを表示
+            var form = $(this).closest('.js-reply-div').find('#js-inner-response-form');
+            form.find('.count').html(max - (form.find('textarea').val().length));
+            form.fadeIn('fast')
+        });
+
+        // スレッド作成表示
+        $('.js-thread-create').click(function() {
+            $('.mod-commentLast-post').show();
+        });
+
+        // スレッド作成表示
+        $('.js-thread-close').click(function() {
+            $('.mod-commentLast-post').hide();
+        });
+
+        // レスポンスフォームPOPUP 非表示
+        $('.js-response-form-close').click(function() {
+            $('.js-copy-inner-response-form').remove();
+            // 掲示板ページでは個別にフォームが設定されている
+            $('[id="js-inner-response-form"]').hide();
+            $('#js-position-order').val('');
+        });
+
+        //　スレッド、レスポンスの確認画面送信
+        $('.js-thread-form, .js-response-form').submit(function(event) {
+            var name_flag = false;
+            var title_flag = false;
+            var comment_flag = false;
+
+            var form = $(this);
+
+            // 名前チェック
+            var name = form.find('#js-name_error');
+            if (form.find('#js-name').val() == '') {
+                name.html('名前を入力してください。');
+            } else {
+                name.empty();
+                name_flag = true;
+            }
+
+            // タイトルチェック
+            var title = form.find('#js-title_error');
+            if (form.find('#js-title') && form.find('#js-title').val() == '') {
+                title.html('タイトルを入力してください。');
+            } else {
+                title.empty();
+                title_flag = true;
+            }
+
+            // コメントのチェック
+            var comment = form.find('#js-comment_error');
+            if (!form.find('#js-comment').val()) {
+                comment.html('投稿内容を入力してください。');
+            } else if (max < form.find('#js-comment').val().length) {
+                comment.html('入力文字数が多すぎます。');
+            } else {
+                comment.empty();
+                comment_flag = true;
+            }
+            if (name_flag && comment_flag && title_flag) {
+                form.find('#ResponseToken').val(1);
+                $('#ThreadToken').val(1);
+                return true;
+            } else {
+                return false;
+            }
+        });
+
+        // テキストエリアのカウント
+        $('textarea').bind('keydown keyup keypress change', function(event) {
+            var count = (max) - ($(this).val().length);
+            $(this).parents('.mod-post-inner').find('.count').html(count);
+            if (count < 0) {
+                $('.count').css({
+                    color: '#ff0000',
+                    fontWeight: 'bold'
+                });
+            } else {
+                $('.count').css({
+                    color: '#000000',
+                    fontWeight: 'normal'
+                });
+            }
+        });
+
+        // popup response (get response data)
+        $('a.pop-action').click(function(event) {
+            event.preventDefault();
+            $('.copy-popform').remove();
+            var url = $('#ajaxUrl').val() + this.id + '/';
+            $.ajax({
+                type: 'POST',
+                url: url,
+                cache: false,
+                success: function(result) {
+                    var data = $.parseJSON(result);
+                    $('#res-order-name').append(data['order'] + '　' + data['name']);
+                    $('#res-id').append(data['str_user']);
+                    $('#res-date').append(data['modified']);
+                    $('#res-comment').append(data['comment']);
+                    return true;
+                },
+                error: function() {
+                    return false;
+                }
+            });
+            var copy = $('.popform').clone(true);
+            // edit class value
+            copy.removeClass('popform').addClass('copy-popform').attr('id', this.id);
+            copy.find('button').attr('id', 'popup_close_' + this.id);
+            // copy & set target html
+            $(event.target).after(copy);
+            $('.copy-popform').show();
+            return true;
+        });
+
+        // レスポンスポップアップ非表示
+        $('.js-response-close').click(function() {
+            $('.copy-popform').remove();
+        });
+
+    });
+
+    // 2重送信防止
+    $('.js-form-send').submit(function() {
+        $(':submit', this).prop('disabled', true);
+        setTimeout(function() {
+            $(":submit", self).prop("disabled", false);
+        }, 5000);
+    });
+});
+
+// popup lower response (get next response data)
+function addLowerComment(obj, event) {
+    event.preventDefault();
+    var url = $('#ajaxUrl').val() + obj.id + '/';
+    $.ajax({
+        type: 'POST',
+        url: url,
+        cache: false,
+        success: function(result) {
+            var data = $.parseJSON(result);
+            $('#lower-order-name').append('<hr>' + data['order'] + '　' + data['name']);
+            $('#lower-id').append(data['str_user']);
+            $('#lower-date').append(data['modified']);
+            $('#lower-comment').append(data['comment']);
+            return true;
+        },
+        error: function() {
+            return false;
+        }
+    });
+    var data = $(obj);
+    var parent_id = data.parents('.copy-popform').attr('id');
+    var copy = $('.lower-popform').clone(true);
+    copy.removeClass('lower-popform');
+    copy.addClass('copy-lower-popform');
+    $('#' + parent_id + ', .copy-popform').find('#res-comment').after(copy);
+    data.replaceWith(data.text());
+    $('.copy-lower-popform').show();
+
+    return true;
+}
